@@ -1,0 +1,10 @@
+@host = http://localhost:5076
+
+GET {{host}}/
+Accept: application/json
+### Get all users
+GET {{host}}/users
+Accept: application/json
+### Get user by id
+GET {{host}}/users/1
+
