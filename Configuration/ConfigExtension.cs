@@ -1,15 +1,18 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using BlogApi.Repository.Interfaces;
 using BlogApi.Services.Interfaces;
+using Microsoft.OpenApi.Models;
+using BlogApi.Libs.Logger;
 using BlogApi.Repository;
 using BlogApi.Services;
 using BlogApi.Models;
-using Microsoft.OpenApi.Models;
+using BlogApi.Shared.Exceptions;
 
 namespace BlogApi.Configuration;
 
 public static class ConfigExtension
 {
+    
     public static void AddLocalServices(this IServiceCollection services)
     {
         services.AddScoped<IArticleService, ArticleService>();
@@ -27,11 +30,12 @@ public static class ConfigExtension
         
     }
     // add setup db context
-    public static void AddDbContext(this IServiceCollection services, IConfiguration configuration)
+    public static void AddLocalDbContext(this IServiceCollection services, string connectionString)
     {
+
         services.AddDbContext<BlogDbContext>(options =>
         {
-            options.UseSqlite(configuration.GetConnectionString("DefaultConnection"));
+            options.UseSqlite(connectionString);
         });
     }
     
@@ -49,5 +53,15 @@ public static class ConfigExtension
         if (!app.Environment.IsDevelopment()) return;
         app.UseSwagger();
         app.UseSwaggerUI();
+        
+    }
+
+   public static void AddMainSetup(this WebApplicationBuilder builder)
+    {
+        builder.Services.AddProblemDetails().AddExceptionHandler<GlobalExceptionHandler>();
+        builder.Logging.ClearProviders(); 
+        builder.Logging.AddConsole();     
+        builder.Logging.AddProvider( new FileLoggerProvider("logs/app.log", 10));
+        builder.Logging.SetMinimumLevel(LogLevel.Information);
     }
 }

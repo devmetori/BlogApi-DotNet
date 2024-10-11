@@ -25,6 +25,7 @@ namespace BlogApi.Models.Context.Migrations
 
                     b.Property<Guid>("AuthorId")
                         .HasColumnType("TEXT");
+                    
 
                     b.Property<string>("Content")
                         .IsRequired()

@@ -7,4 +7,6 @@ GET {{host}}/users
 Accept: application/json
 ### Get user by id
 GET {{host}}/users/1
+Accept: application/json
+
 
