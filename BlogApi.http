@@ -1,12 +1,23 @@
 @host = http://localhost:5076
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4OGE4NmY5Zi1kZjVkLTRlMjEtYWMyMi1mNTRiMGY0NjliYmEiLCJqdGkiOiIxMzQyYTExZC1hYWU0LTQ5NTgtYjAzYS1kM2RlZDAxOGQ0YmQiLCJleHAiOjE3MjQ2NTIwNjcsImlzcyI6InlvdXJfaXNzdWVyIiwiYXVkIjoieW91cl9hdWRpZW5jZSJ9.IU0ZB6RNkvAwkXU9IBrdXXdHTcmywcA1v62rsJbVOnA
 
 GET {{host}}/
 Accept: application/json
-### Get all users
+### Obtener una lista de usuarios
 GET {{host}}/users
 Accept: application/json
-### Get user by id
+Authorization: Bearer {{token}}
+### Obtener un usuario
 GET {{host}}/users/1
 Accept: application/json
+Authorization: Bearer {{token}}
+### Obtener todos los articulos
+GET {{host}}/articles/all
+Accept: application/json
+Authorization: Bearer {{token}}
+### Obtener todos los articulos publicados
+GET {{host}}/articles
+Accept: application/json
+Authorization: Bearer {{token}}
 
 

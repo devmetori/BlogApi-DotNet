@@ -1,3 +1,3 @@
 ﻿namespace BlogApi.Shared.DTOs;
 
-public record ForgotPasswordDto();
+public record ForgotPasswordDto(string email);

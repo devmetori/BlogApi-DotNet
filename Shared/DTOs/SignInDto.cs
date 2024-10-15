@@ -1,3 +1,3 @@
 ﻿namespace BlogApi.Shared.DTOs;
 
-public record SignInDto();
+public record SignInDto(string email, string password);

@@ -1,3 +1,3 @@
 ﻿namespace BlogApi.Shared.DTOs;
 
-public record ReviewDto();
+public record ReviewDto(string comment, string status);

@@ -1,3 +1,5 @@
-﻿namespace BlogApi.Shared.DTOs;
+﻿using BlogApi.Shared.Enums;
 
-public record ApprovalDto();
+namespace BlogApi.Shared.DTOs;
+
+public record ApprovalDto(string comment, ArticleStatus status);

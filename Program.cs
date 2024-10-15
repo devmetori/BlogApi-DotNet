@@ -1,17 +1,18 @@
 using BlogApi.Configuration;
-using BlogApi.Libs.Logger;
+using BlogApi.Lib.Logger;
+
 
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddMainSetup();
-builder.Services.AddLocalDbContext(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=blog.db");
+builder.AddInitialSetup();
 builder.Services.AddLocalRepositories();
 builder.Services.AddLocalServices();
 builder.Services.AddControllers();
 builder.Services.AddSwagger();
 
 var app = builder.Build();
+
 app.UseMiddleware<LoggingMiddleware>();
 app.MapControllers();
 app.UseLocalSwagger();
