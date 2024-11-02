@@ -1,13 +1,12 @@
-﻿using BlogApi.Api.Attributes;
+﻿using Microsoft.AspNetCore.Mvc;
+using Swashbuckle.AspNetCore.Annotations;
+using BlogApi.Api.Attributes;
 using BlogApi.Api.Services.Interfaces;
 using BlogApi.Shared.Exceptions;
-using Microsoft.AspNetCore.Mvc;
-
 namespace BlogApi.Api.Controllers;
 
 
 [Route("users")]
-[ApiController]
 [IsAuthenticated]
 public class UserController(IAuthService authService, IJwtService jwtService) : Controller
 {

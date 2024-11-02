@@ -1,62 +1,68 @@
-﻿using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
+﻿using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
+using System.Security.Claims;
 using System.Text;
 using BlogApi.Api.Services.Interfaces;
-using BlogApi.Shared.Models;
+using BlogApi.Shared.Models.Settings;
+using BlogApi.Shared.Models.Auth;
+
 
 namespace BlogApi.Api.Services;
-public class JwtService(IConfiguration config, ILogger<JwtService> logger) : IJwtService
+
+public class JwtService : IJwtService
 {
+    private readonly ILogger<JwtService> _logger;
+    private readonly IOptions<JwtSettings> _jwtSettings;
+
+    public JwtService(ILogger<JwtService> logger, IOptions<JwtSettings> jwtSettings)
+    {
+        this._logger = logger;
+        this._jwtSettings = jwtSettings;
+    }
+
     private JwtSettings GetJwtSettings()
     {
-        var jwtSettings = config.GetSection("JwtSettings").Get<JwtSettings>();
+        var jwtSettings = _jwtSettings.Value;
         if (jwtSettings is null) throw new NullReferenceException("JwtSettings is null");
-  
         return jwtSettings;
+    }
+
+    private IEnumerable<Claim> GeneratePayload(JwtPayload payload)
+    {
+        return new List<Claim>
+        {
+            new(ClaimTypes.NameIdentifier, payload.Id),
+            new(ClaimTypes.Role, payload.Role.ToString()),
+            new("sessionId", payload.SessionId),
+        };
     }
 
     public JwtValidation IsValidToken(string token)
     {
         var jwtSettings = GetJwtSettings();
         if (string.IsNullOrEmpty(token)) return JwtValidation.Failure("Token no puede ser nulo o vacío.");
-        var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(jwtSettings.SecretKey);
 
-        try
+        var validationParameters = new TokenValidationParameters
         {
-            TokenValidationParameters validator = new()
-            {
-                ValidateIssuerSigningKey = true,
-                IssuerSigningKey = new SymmetricSecurityKey(key),
-                ValidateIssuer = true,
-                ValidIssuer = jwtSettings.Issuer,
-                ValidateAudience = true,
-                ValidAudience = jwtSettings.Audience,
-                ValidateLifetime = true,
-                ClockSkew = TimeSpan.Zero
-            };
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ClockSkew = TimeSpan.Zero
+        };
 
-            var principal = tokenHandler.ValidateToken(token, validator, out SecurityToken validatedToken);
-            if (validatedToken is JwtSecurityToken jwtToken)
-            {
-                if (jwtToken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256,
-                        StringComparison.InvariantCultureIgnoreCase)) return JwtValidation.Success(principal);
-            }
-        }
-        catch (SecurityTokenExpiredException e)
+        var result = new JsonWebTokenHandler().ValidateToken(token, validationParameters);
+
+        if (result.IsValid && result.ClaimsIdentity != null)
         {
-            logger.LogError(e, "Token ha expirado.");
-            return JwtValidation.Failure("Token ha expirado.");
-        }
-        catch (SecurityTokenException e)
-        {
-            logger.LogError(e, "Token ha expirado.");
-            return JwtValidation.Failure("Token no es válido.");
+            return JwtValidation.Success(new ClaimsPrincipal(result.ClaimsIdentity));
         }
 
         return JwtValidation.Failure("Token no es válido o ha expirado");
     }
+
 
     private SigningCredentials SigningCredentials(string SecretKey)
     {
@@ -64,35 +70,51 @@ public class JwtService(IConfiguration config, ILogger<JwtService> logger) : IJw
         return new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
     }
 
-    private string GenerateToken(JwtSettings jwtSettings, IEnumerable<Claim> claims, SigningCredentials credentials)
+    private string GenerateSingleToken(IEnumerable<Claim> claims, SigningCredentials credentials, int Expiration)
     {
-        var token = new JwtSecurityToken(
-            issuer: jwtSettings.Issuer,
-            audience: jwtSettings.Audience,
-            claims: claims,
-            expires: DateTime.Now.AddMinutes(jwtSettings.Expiration),
-            signingCredentials: credentials
-        );
+        var jwtSettings = GetJwtSettings();
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Issuer= jwtSettings.Issuer,
+            IssuedAt = DateTime.UtcNow,
+            Audience= jwtSettings.Audience,
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddMinutes(Expiration),
+            SigningCredentials = credentials,
+        };
 
-        return new JwtSecurityTokenHandler().WriteToken(token);
+        return  new JsonWebTokenHandler().CreateToken(tokenDescriptor);
     }
 
-    public string GenerateAccessToken(IEnumerable<Claim> claims)
+
+    public (string access, string refresh) GenerateTokens(JwtPayload payload)
+    {
+        var access = GenerateAccessToken(payload);
+        var refresh = GenerateRefreshToken(payload);
+        return (access, refresh);
+    }
+
+    public string GenerateAccessToken(JwtPayload payload)
     {
         var jwtSettings = GetJwtSettings();
         var credentials = SigningCredentials(jwtSettings.SecretKey);
-       
-        return GenerateToken(jwtSettings, claims, credentials);
+        var claims = GeneratePayload(payload);
+        return GenerateSingleToken(claims, credentials, jwtSettings.Expiration);
     }
 
-    public string GenerateRefreshToken(string token, IEnumerable<Claim> claims)
+    public string GenerateToken(IEnumerable<Claim> claims, string SecretKey)
     {
-        var result = IsValidToken(token);
-        if (!result.IsValid) throw new SecurityTokenException(result.Message);
-        
+        var jwtSettings = GetJwtSettings();
+        var credentials = SigningCredentials(SecretKey);
+        return GenerateSingleToken(claims, credentials, jwtSettings.Expiration);
+    }
+
+    public string GenerateRefreshToken(JwtPayload payload)
+    {
         var jwtSettings = GetJwtSettings();
         var credentials = SigningCredentials(jwtSettings.SecretKey);
-         jwtSettings.Expiration = 60 * 24 * 7;
-        return GenerateToken(jwtSettings, claims, credentials);
+        var claims = GeneratePayload(payload);
+        var expiration = jwtSettings.Expiration * 60 * 24 * 7;
+        return GenerateSingleToken(claims, credentials, expiration);
     }
 }

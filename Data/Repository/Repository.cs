@@ -7,22 +7,14 @@ using BlogApi.Shared.Enums;
 
 namespace BlogApi.Data.Repository;
 
-public abstract class Repository<TEntity> : IRepository<TEntity> where TEntity : class
+public abstract class Repository<TEntity>(BlogDbContext context) : IRepository<TEntity>
+    where TEntity : class
 {
-    protected readonly BlogDbContext _context;
-    protected readonly DbSet<TEntity> _dbSet;
-
-    public Repository(BlogDbContext context)
-    {
-        _context = context;
-        _dbSet = context.Set<TEntity>();
-    }
-
-    public virtual async Task<Result<TEntity>> GetByIdAsync(string id)
+    public virtual async Task<Result<TEntity>> GetByIdAsync(string Id)
     {
         try
         {
-            var data = await _dbSet.FindAsync(id);
+            var data = await context.Set<TEntity>().FindAsync(Id);
             if (data == null) Result<TEntity>.Failure(ERROR_CODE.RECORD_NOT_FOUND, "Registro no encontrado");
             return Result<TEntity>.Success(data);
         }
@@ -33,14 +25,12 @@ public abstract class Repository<TEntity> : IRepository<TEntity> where TEntity :
         }
     }
 
-   
+
     public virtual async Task<Result<IEnumerable<TEntity>>> GetAllAsync()
     {
         try
         {
-            var data = await _dbSet.ToListAsync();
-            if (data == null)
-                Result<IEnumerable<TEntity>>.Failure(ERROR_CODE.RECORD_NOT_FOUND, "No se encontraron registros");
+            var data = await context.Set<TEntity>().ToListAsync();
             return Result<IEnumerable<TEntity>>.Success(data);
         }
         catch (Exception e)
@@ -54,9 +44,7 @@ public abstract class Repository<TEntity> : IRepository<TEntity> where TEntity :
     {
         try
         {
-            var data = await _dbSet.Where(predicate).ToListAsync();
-            if (data == null)
-                Result<IEnumerable<TEntity>>.Failure(ERROR_CODE.RECORD_NOT_FOUND, "No se encontraron registros");
+            var data = await context.Set<TEntity>().Where(predicate).ToListAsync();
             return Result<IEnumerable<TEntity>>.Success(data);
         }
         catch (Exception e)
@@ -66,14 +54,29 @@ public abstract class Repository<TEntity> : IRepository<TEntity> where TEntity :
         }
     }
 
+    public virtual async Task<Result<TEntity>> FindFirstAsync(Expression<Func<TEntity, bool>> predicate)
+    {
+        try
+        {
+            var data = await context.Set<TEntity>().FirstOrDefaultAsync(predicate);
+            return data == null
+                ? Result<TEntity>.Failure(ERROR_CODE.RECORD_NOT_FOUND, "No se encontró el registro")
+                : Result<TEntity>.Success(data);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return Result<TEntity>.Failure(ERROR_CODE.UNKNOWN_ERROR, "Error al obtener el registro");
+        }
+    }
+
     public virtual async Task<Result<TEntity>> AddAsync(TEntity entity)
     {
         try
         {
-            var data = await _dbSet.AddAsync(entity);
-            await _context.SaveChangesAsync();
-            if (data == null) Result<TEntity>.Failure(ERROR_CODE.GENERAL_API_ERROR, "Error al crear el registro");
-            return Result<TEntity>.Success(data.Entity);
+            var result = await context.Set<TEntity>().AddAsync(entity);
+            var changeResult = await context.SaveChangesAsync();
+            return changeResult == 0 ? Result<TEntity>.Failure(ERROR_CODE.UNKNOWN_ERROR, "Error al crear el registro") : Result<TEntity>.Success(result.Entity);
         }
         catch (Exception e)
         {
@@ -86,9 +89,8 @@ public abstract class Repository<TEntity> : IRepository<TEntity> where TEntity :
     {
         try
         {
-            var data = _dbSet.Update(entity);
-            await _context.SaveChangesAsync();
-            if (data == null) Result<TEntity>.Failure(ERROR_CODE.GENERAL_API_ERROR, "Error al actualizar el registro");
+            var data = context.Set<TEntity>().Update(entity);
+            await context.SaveChangesAsync();
             return Result<TEntity>.Success(data.Entity);
         }
         catch (Exception e)
@@ -97,22 +99,42 @@ public abstract class Repository<TEntity> : IRepository<TEntity> where TEntity :
             return Result<TEntity>.Failure(ERROR_CODE.UNKNOWN_ERROR, "Error al actualizar el registro");
         }
     }
-    
+
     public virtual async Task<Result<TEntity>> DeleteAsync(string id)
     {
         try
         {
             var result = await GetByIdAsync(id);
             if (!result.IsSuccess) return result;
-            var data = _dbSet.Remove(result.Data);
-            await _context.SaveChangesAsync();
-            if (data == null) Result<TEntity>.Failure(ERROR_CODE.GENERAL_API_ERROR, "Error al eliminar el registro");
+            var data = context.Set<TEntity>().Remove(result.Data);
+            await context.SaveChangesAsync();
             return Result<TEntity>.Success(data.Entity);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
             return Result<TEntity>.Failure(ERROR_CODE.UNKNOWN_ERROR, "Error al eliminar el registro");
+        }
+    }
+
+
+    public virtual async Task<Result<TEntity>> AddOrUpdateAsync(Expression<Func<TEntity, bool>> predicate,TEntity entity)
+    {
+        try
+        {
+            var result = await FindFirstAsync(predicate);
+            if (!result.IsSuccess) return await AddAsync(entity);
+
+            context.Entry(result.Data).CurrentValues.SetValues(entity);
+            var changes = await context.SaveChangesAsync();
+            if (changes == 0) throw new Exception("Error al agregar o actualizar el registro");
+            return Result<TEntity>.Success(result.Data);
+
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return Result<TEntity>.Failure(ERROR_CODE.UNKNOWN_ERROR, "Error al agregar o actualizar el registro");
         }
     }
 }

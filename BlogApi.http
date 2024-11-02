@@ -1,20 +1,48 @@
-@host = http://localhost:5076
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI4OGE4NmY5Zi1kZjVkLTRlMjEtYWMyMi1mNTRiMGY0NjliYmEiLCJqdGkiOiIxMzQyYTExZC1hYWU0LTQ5NTgtYjAzYS1kM2RlZDAxOGQ0YmQiLCJleHAiOjE3MjQ2NTIwNjcsImlzcyI6InlvdXJfaXNzdWVyIiwiYXVkIjoieW91cl9hdWRpZW5jZSJ9.IU0ZB6RNkvAwkXU9IBrdXXdHTcmywcA1v62rsJbVOnA
+@host = http://localhost:8080/api/v1/
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjYyZTE5NjEyLWM3MjEtNDk5Mi04YmQzLWZmNjY5MmU5MjEzNiIsImV4cCI6MTcyOTgzNjAwNiwiaXNzIjoiaHR0cHM6Ly9sb2NhbGhvc3Q6NTA3NiIsImF1ZCI6Imh0dHBzOi8vbG9jYWxob3N0OjUwNzYifQ.Yq8W9XcgjkbGjRSF7IiNgqMe9ZUWgYt8fd-lDmudytU
 
+
+### Ruta raiz
 GET {{host}}/
 Accept: application/json
+
+### Crear cuenta de usuario
+POST {{host}}/auth/sign-up
+Content-Type: application/json
+
+{
+  "name": "Mak",
+  "surname": "Tort",
+  "email": "mak@gmail.com",
+  "password": "123QWEasd"
+}
+
+### Iniciar sesion
+POST {{host}}/auth/sign-in
+Content-Type: application/json
+
+{
+  "email": "mak@gmail.com",
+  "password": "123QWEasd"
+}
+
+
+
 ### Obtener una lista de usuarios
 GET {{host}}/users
 Accept: application/json
 Authorization: Bearer {{token}}
+
 ### Obtener un usuario
 GET {{host}}/users/1
 Accept: application/json
 Authorization: Bearer {{token}}
+
 ### Obtener todos los articulos
 GET {{host}}/articles/all
 Accept: application/json
 Authorization: Bearer {{token}}
+
 ### Obtener todos los articulos publicados
 GET {{host}}/articles
 Accept: application/json

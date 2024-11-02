@@ -12,7 +12,7 @@ public class IsAuthenticatedAttribute : Attribute, IAuthorizationFilter
         var authorizationHeader = context.HttpContext.Request.Headers.Authorization.FirstOrDefault();
         if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
         {
-            context.Result = UnauthorizedResponse(ERROR_CODE.NOT_AUTHENTICATED,
+            context.Result = UnauthorizedResponse(ERROR_CODE.UNAUTHORIZED,
                 "Parece que no tienes un sesion activa en este momento. Inicia session para poder aceder este recurso."
             );
             return;
@@ -24,7 +24,7 @@ public class IsAuthenticatedAttribute : Attribute, IAuthorizationFilter
         var result = jwtService.IsValidToken(token);
         if (!result.IsValid)
         {
-            context.Result = UnauthorizedResponse(ERROR_CODE.NOT_AUTHENTICATED,
+            context.Result = UnauthorizedResponse(ERROR_CODE.UNAUTHORIZED,
                 "La sesión ha expirado, intenta iniciar de nuevo");
             return;
         }

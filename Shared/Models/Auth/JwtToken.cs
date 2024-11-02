@@ -1,4 +1,4 @@
-﻿namespace BlogApi.Shared.Models;
+﻿namespace BlogApi.Shared.Models.Auth;
 
 public class JwtToken
 {

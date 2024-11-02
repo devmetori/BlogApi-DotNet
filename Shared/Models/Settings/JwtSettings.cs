@@ -1,4 +1,4 @@
-﻿namespace BlogApi.Shared.Models;
+﻿namespace BlogApi.Shared.Models.Settings;
 
 public class JwtSettings
 {

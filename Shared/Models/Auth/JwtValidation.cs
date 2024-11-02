@@ -1,6 +1,6 @@
 ﻿using System.Security.Claims;
 
-namespace BlogApi.Shared.Models;
+namespace BlogApi.Shared.Models.Auth;
 
 public class JwtValidation
 {

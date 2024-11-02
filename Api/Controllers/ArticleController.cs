@@ -1,13 +1,12 @@
-﻿using BlogApi.Api.Attributes;
+﻿using Microsoft.AspNetCore.Mvc;
 using BlogApi.Api.Services.Interfaces;
 using BlogApi.Shared.Exceptions;
-using Microsoft.AspNetCore.Mvc;
+using BlogApi.Api.Attributes;
 using BlogApi.Shared.DTOs;
 
 namespace BlogApi.Api.Controllers;
 
 [Route("articles")]
-[ApiController]
 [IsAuthenticated]
 public class ArticleController(IArticleService _articleService) : Controller
 {
