@@ -11,9 +11,9 @@ POST {{host}}/auth/sign-up
 Content-Type: application/json
 
 {
-  "name": "Mak",
-  "surname": "Tort",
-  "email": "mak@gmail.com",
+  "name": "test",
+  "surname": "test",
+  "email": "test@example.com",
   "password": "123QWEasd"
 }
 
@@ -22,7 +22,7 @@ POST {{host}}/auth/sign-in
 Content-Type: application/json
 
 {
-  "email": "mak@gmail.com",
+  "email": "test@example.com",
   "password": "123QWEasd"
 }
 

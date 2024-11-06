@@ -5,4 +5,7 @@ using BlogApi.Data.Repository.Interfaces;
 
 namespace BlogApi.Data.Repository;
 
-public class RoleRepository(BlogDbContext context) : Repository<Role>(context), IRoleRepository;
+public class RoleRepository(BlogDbContext context) : Repository<Role>(context), IRoleRepository
+{
+    
+}

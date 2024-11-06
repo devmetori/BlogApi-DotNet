@@ -2,7 +2,6 @@ using BlogApi.Api.Middlewares;
 using BlogApi.Configuration;
 
 
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddInitialSetup();
@@ -22,7 +21,7 @@ app.UseStatusCodePages();
 app.UseExceptionHandler();
 app.MapGet("/", async () => {
 
-    return Results.Ok(new { success = true, message = "👍 API en linea" });
+    return Results.Ok(new { success = true, message = "Hello world!" });
 });
 app.MapGet("/health", () => Results.Ok(new { success = true, message = "👍 API en linea" }));
 app.Run();

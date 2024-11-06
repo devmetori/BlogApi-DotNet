@@ -64,6 +64,6 @@ public class BlogDbContext(DbContextOptions<BlogDbContext> options, IConfigurati
             .HasForeignKey(al => al.ArticleId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        // get context from base
+   
     }
 }

@@ -2,7 +2,10 @@
 using Swashbuckle.AspNetCore.Annotations;
 using BlogApi.Api.Attributes;
 using BlogApi.Api.Services.Interfaces;
+using BlogApi.Shared.Enums;
 using BlogApi.Shared.Exceptions;
+using Microsoft.AspNetCore.Authorization;
+
 namespace BlogApi.Api.Controllers;
 
 
@@ -14,6 +17,7 @@ public class UserController(IAuthService authService, IJwtService jwtService) : 
 
 
     [HttpGet]
+    [IsAllow([RoleName.ADMIN, RoleName.SUPERUSUARIO])]
     public async Task<IActionResult> GetAllUsers()
     {
         var result = await authService.GetAllUsers();

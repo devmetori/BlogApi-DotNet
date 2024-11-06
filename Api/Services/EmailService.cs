@@ -16,7 +16,7 @@ public class EmailService : IEmailService
     private readonly ITemplateService _templateService;
     private readonly ILogger<EmailService> _logger;
     private readonly MailSettings _mailSettings;
-    private readonly  IWebHostEnvironment _env;
+    private readonly IWebHostEnvironment _env;
 
     public EmailService(ILogger<EmailService> logger, IOptions<MailSettings> mailSettings,
         ITemplateService templateService, IWebHostEnvironment env)
@@ -98,16 +98,19 @@ public class EmailService : IEmailService
 
     public async Task<Result<object>> SendEmailAsync(MailPayload mailPayload)
     {
-        if(_env.IsDevelopment())
+        if (_env.IsDevelopment())
         {
-            _logger.LogInformation("Enviando correo a {Recipient} con el asunto: {Subject}", mailPayload.ToEmail, mailPayload.Subject);
+            _logger.LogInformation("Enviando correo a {Recipient} con el asunto: {Subject}", mailPayload.ToEmail,
+                mailPayload.Subject);
             return Result<object>.Success("Correo enviado correctamente");
         }
-        
+
         if (_mailSettings is null) throw new NullReferenceException("Mail settings not found");
         var email = FormatMail(mailPayload);
         var result = await CreateMailTransactionAsync(email);
-        return !result.IsSuccess ? Result<object>.Failure(result.Code, result.Message) : Result<object>.Success("Correo enviado correctamente");
+        return !result.IsSuccess
+            ? Result<object>.Failure(result.Code, result.Message)
+            : Result<object>.Success("Correo enviado correctamente");
     }
 
 
@@ -121,6 +124,11 @@ public class EmailService : IEmailService
 
     public async Task<Result<object>> SendForgotPasswordEmailAsync(MailPayload mailPayload)
     {
+        if (_env.IsDevelopment())
+        {
+            Console.WriteLine("Link: " + mailPayload.Model.LinkOrToken);
+        }
+
         mailPayload.Body = await _templateService.GetTemplateAsync("VerifyAccountTemplate", mailPayload.Model);
         var result = await SendEmailAsync(mailPayload);
         if (!result.IsSuccess) return Result<object>.Failure(result.Code, result.Message);

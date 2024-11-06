@@ -8,5 +8,6 @@ public interface IUserRepository: IRepository<User>
 {
     Task<Result<User>> FindUserWithRoleAsync(Expression<Func<User, bool>> predicate);
     Task<Result<User>> FindUserWithSessionAndRoleAsync(Expression<Func<User, bool>> predicate);
+    Task<Result<List<Permission>>> GetUserPermissionsByIdAsync(string userId);
     
 }

@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using BlogApi.Lib.Files.Interfaces;
 using BlogApi.Shared.Enums;
 using BlogApi.Shared.Models;
@@ -29,4 +30,37 @@ public class JsonFileReader<T> : IFileReader<T>
             return Result<T>.Failure(ERROR_CODE.UNKNOWN_ERROR, e.Message);
         }
     }
+    
+public async Task<Result<object>> WriteAsync(string path, T data)
+{
+    try
+    {
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true,
+            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+            Converters = { new JsonStringEnumConverter() }
+        };
+
+        var jsonContent = JsonSerializer.Serialize(data, options);
+        await File.WriteAllTextAsync(path, jsonContent);
+
+        return Result<object>.Success("Fichero JSON creado correctamente.");
+    }
+    catch (IOException ioEx)
+    {
+        Console.WriteLine(ioEx);
+        return Result<object>.Failure(ERROR_CODE.IO_ERROR, ioEx.Message);
+    }
+    catch (UnauthorizedAccessException uaEx)
+    {
+        Console.WriteLine(uaEx);
+        return Result<object>.Failure(ERROR_CODE.FILE_SYSTEM_UNAUTHORIZED_ACCESS, uaEx.Message);
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine(e);
+        return Result<object>.Failure(ERROR_CODE.UNKNOWN_ERROR, e.Message);
+    }
+}   
 }

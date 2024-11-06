@@ -34,7 +34,9 @@ public class UserRepository(BlogDbContext context) : Repository<User>(context), 
                     Role = role,
                 }).FirstOrDefaultAsync(predicate);
 
-            return result == null ? Result<User>.Failure(ERROR_CODE.RECORD_NOT_FOUND, "Registro no encontrado") : Result<User>.Success(result);
+            return result == null
+                ? Result<User>.Failure(ERROR_CODE.RECORD_NOT_FOUND, "Registro no encontrado")
+                : Result<User>.Success(result);
         }
         catch (Exception e)
         {
@@ -43,7 +45,11 @@ public class UserRepository(BlogDbContext context) : Repository<User>(context), 
         }
     }
 
-    
+  
+
+
+
+
     public async Task<Result<User>> FindUserWithSessionAndRoleAsync(Expression<Func<User, bool>> predicate)
     {
         try
@@ -69,12 +75,40 @@ public class UserRepository(BlogDbContext context) : Repository<User>(context), 
                     Role = ur.role,
                     Session = session
                 }).FirstOrDefaultAsync(predicate);
-            return result is null ? Result<User>.Failure(ERROR_CODE.RECORD_NOT_FOUND, "Registro no encontrado") : Result<User>.Success(result);
+            return result is null
+                ? Result<User>.Failure(ERROR_CODE.RECORD_NOT_FOUND, "Registro no encontrado")
+                : Result<User>.Success(result);
         }
         catch (Exception e)
         {
             Console.WriteLine(e);
             return Result<User>.Failure(ERROR_CODE.UNKNOWN_ERROR, "Error al obtener el registro");
+        }
+    }
+
+    public async Task<Result<List<Permission>>> GetUserPermissionsByIdAsync(string userId)
+    {
+        try
+        {
+            
+
+            var result = await context.Users
+                .Where(u => u.Id == Guid.Parse(userId))
+                .SelectMany(u => u.Role.Authorizations)
+                .Select(rp => rp.Permission)
+                .ToListAsync();
+            if (result is null)
+            {
+                return Result<List<Permission>>.Failure(ERROR_CODE.RECORD_NOT_FOUND,
+                    "No se ha encontrado los permisos del usuario");
+            }
+
+            return Result<List<Permission>>.Success(result);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            return Result<List<Permission>>.Failure(ERROR_CODE.UNKNOWN_ERROR, "Hello world");
         }
     }
 }

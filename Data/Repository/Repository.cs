@@ -76,7 +76,9 @@ public abstract class Repository<TEntity>(BlogDbContext context) : IRepository<T
         {
             var result = await context.Set<TEntity>().AddAsync(entity);
             var changeResult = await context.SaveChangesAsync();
-            return changeResult == 0 ? Result<TEntity>.Failure(ERROR_CODE.UNKNOWN_ERROR, "Error al crear el registro") : Result<TEntity>.Success(result.Entity);
+            return changeResult == 0
+                ? Result<TEntity>.Failure(ERROR_CODE.UNKNOWN_ERROR, "Error al crear el registro")
+                : Result<TEntity>.Success(result.Entity);
         }
         catch (Exception e)
         {
@@ -100,14 +102,13 @@ public abstract class Repository<TEntity>(BlogDbContext context) : IRepository<T
         }
     }
 
-    public virtual async Task<Result<TEntity>> DeleteAsync(string id)
+    public virtual async Task<Result<TEntity>> DeleteAsync(TEntity entity)
     {
         try
         {
-            var result = await GetByIdAsync(id);
-            if (!result.IsSuccess) return result;
-            var data = context.Set<TEntity>().Remove(result.Data);
-            await context.SaveChangesAsync();
+            var data = context.Set<TEntity>().Remove(entity);
+            var countChange = await context.SaveChangesAsync();
+            if (countChange == 0) throw new Exception("Error al eliminar el registro");
             return Result<TEntity>.Success(data.Entity);
         }
         catch (Exception e)
@@ -118,7 +119,8 @@ public abstract class Repository<TEntity>(BlogDbContext context) : IRepository<T
     }
 
 
-    public virtual async Task<Result<TEntity>> AddOrUpdateAsync(Expression<Func<TEntity, bool>> predicate,TEntity entity)
+    public virtual async Task<Result<TEntity>> AddOrUpdateAsync(Expression<Func<TEntity, bool>> predicate,
+        TEntity entity)
     {
         try
         {
@@ -129,7 +131,6 @@ public abstract class Repository<TEntity>(BlogDbContext context) : IRepository<T
             var changes = await context.SaveChangesAsync();
             if (changes == 0) throw new Exception("Error al agregar o actualizar el registro");
             return Result<TEntity>.Success(result.Data);
-
         }
         catch (Exception e)
         {

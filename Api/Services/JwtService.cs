@@ -38,11 +38,11 @@ public class JwtService : IJwtService
         };
     }
 
-    public JwtValidation IsValidToken(string token)
+    public JwtValidation IsValidToken(string token, string? SecretKey = null)
     {
         var jwtSettings = GetJwtSettings();
         if (string.IsNullOrEmpty(token)) return JwtValidation.Failure("Token no puede ser nulo o vacío.");
-        var key = Encoding.ASCII.GetBytes(jwtSettings.SecretKey);
+        var key = Encoding.ASCII.GetBytes(SecretKey ?? jwtSettings.SecretKey);
 
         var validationParameters = new TokenValidationParameters
         {

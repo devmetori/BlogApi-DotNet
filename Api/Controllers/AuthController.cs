@@ -96,16 +96,18 @@ public class AuthController(IAuthService authService) : Controller
             {
                 result.Data.Id,
                 result.Data.Email,
-                acccessToken = result.Data.Tokens.access,
+                accessToken = result.Data.Tokens.access,
             }
         });
     }
 
+    [IsAuthenticated]
     [HttpDelete("sign-out")]
-    public async Task<IActionResult> Signout()
+    public async Task<IActionResult> SignOut()
     {
-        var data = HttpContext.Request.HttpContext.User.MapClaimsToPayload();
-        var result = await authService.SignOutAsync(data.SessionId);
+        var user = HttpContext.User;
+        var payload = user.MapClaimsToPayload();
+        var result = await authService.SignOutAsync(payload.SessionId);
         if (!result.IsSuccess) HttpException.ThrowException(result.Code, result.Message);
         HttpContext.Response.Cookies.Delete(CookieName);
         return Ok(new { Success = true, result.Message, data = result.Data });

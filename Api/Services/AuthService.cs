@@ -16,20 +16,26 @@ public class AuthService : IAuthService
 {
     private readonly ITwoFactorAuthService _twoFactorAuthService;
     private readonly ISessionRepository _sessionRepository;
+    private readonly IRoleRepository _roleRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IConfiguration _configuration;
     private readonly IEmailService _emailService;
     private readonly IJwtService _jwtService;
     private readonly IWebHostEnvironment _env;
 
 
-    public AuthService(IUserRepository userRepository, ISessionRepository sessionRepository, IJwtService jwtService,
-        IEmailService emailService, ITwoFactorAuthService twoFactorAuthService, IWebHostEnvironment env)
+    public AuthService(IWebHostEnvironment env,
+        IConfiguration configuration, IUserRepository userRepository, IRoleRepository roleRepository,
+        ISessionRepository sessionRepository, IJwtService jwtService,
+        IEmailService emailService, ITwoFactorAuthService twoFactorAuthService)
     {
-        _userRepository = userRepository;
-        _jwtService = jwtService;
-        _emailService = emailService;
-        _sessionRepository = sessionRepository;
         _twoFactorAuthService = twoFactorAuthService;
+        _sessionRepository = sessionRepository;
+        _roleRepository = roleRepository;
+        _userRepository = userRepository;
+        _configuration = configuration;
+        _emailService = emailService;
+        _jwtService = jwtService;
         _env = env;
     }
 
@@ -42,6 +48,15 @@ public class AuthService : IAuthService
             return Result<UserDto>.Failure(ERROR_CODE.CONFLICT_OPERATION, "El correo electrónico ya está registrado");
         }
 
+
+        var RoleFetchResult = await _roleRepository.FindFirstAsync(role =>
+            role.Name == RoleName.READER.ToString() && role.Code == RoleName.READER);
+        if (!RoleFetchResult.IsSuccess)
+        {
+            return Result<UserDto>.Failure(fetchResult.Code,
+                "No se ha podido registrar el usuario, intentalo de nuevo");
+        }
+
         var hashedPassword = new PasswordHasher<object>().HashPassword(null, model.password);
 
         var result = await _userRepository.AddAsync(new User
@@ -50,16 +65,17 @@ public class AuthService : IAuthService
             AccountVerified = false,
             Password = hashedPassword,
             Name = model.name,
-            Surname = model.surname
+            Surname = model.surname,
+            RoleId = RoleFetchResult.Data.Id,
         });
 
         if (!result.IsSuccess) Result<User>.Failure(result.Code, result.Message);
-        MailPayload WelcomePayload = new()
+        MailPayload Payload = new()
         {
             ToEmail = model.email, Subject = "Bienvenido a BlogAPI",
             Model = new TemplateModel(model.name, "http://localhost:5000/blog")
         };
-        var resultWelcomeEmail = await _emailService.SendWelcomeEmailAsync(WelcomePayload);
+        var resultWelcomeEmail = await _emailService.SendWelcomeEmailAsync(Payload);
         if (!resultWelcomeEmail.IsSuccess)
         {
             return Result<UserDto>.Failure(resultWelcomeEmail.Code, resultWelcomeEmail.Message);
@@ -75,12 +91,13 @@ public class AuthService : IAuthService
         {
             Result<UserDto>.Failure(resultVerificationEmail.Code, resultVerificationEmail.Message);
         }
+
         return Result<UserDto>.Success("Usuario registrado exitosamente");
     }
 
     public async Task<Result<User>> VerifyAccountAsync(Guid id)
     {
-        var result = await _userRepository.FindFirstAsync(u =>u.Id == id);
+        var result = await _userRepository.FindFirstAsync(u => u.Id == id);
 
         if (!result.IsSuccess) return Result<User>.Failure(result.Code, result.Message);
         var user = result.Data;
@@ -98,7 +115,7 @@ public class AuthService : IAuthService
 
     public async Task<Result<User>> SendVerifyAccountAsync(Guid id)
     {
-        var result = await _userRepository.FindFirstAsync(m=> m.Id == id);
+        var result = await _userRepository.FindFirstAsync(m => m.Id == id);
 
         if (!result.IsSuccess) return Result<User>.Failure(result.Code, result.Message);
         var user = result.Data;
@@ -147,7 +164,7 @@ public class AuthService : IAuthService
                 SessionId = result.Data.Session.Id.ToString()
             };
             //TODO: Asegurarse de que el tiempo de expiración el refresh token sea correcto
-            var (access,refresh) = _jwtService.GenerateTokens(NewPayload);
+            var (access, refresh) = _jwtService.GenerateTokens(NewPayload);
             return Result<UserDto>.Success(result.Data.MapToDto(new JwtDto(access, refresh)));
         }
 
@@ -188,8 +205,11 @@ public class AuthService : IAuthService
     {
         var result = await _userRepository.FindUserWithRoleAsync(user => user.Id == Guid.Parse(model.id));
         if (!result.IsSuccess)
+        {
             return Result<UserDto>.Failure(result.Code,
                 "Usuario no encontrado, asegurate de estar registrado o de haber ingresado correctamente los datos");
+        }
+
         if (result.Data.Verified2fa)
         {
             return Result<UserDto>.Failure(ERROR_CODE.CONFLICT_OPERATION, "El usuario ya ha sido verificado");
@@ -216,7 +236,7 @@ public class AuthService : IAuthService
             SessionId = createResult.Data.Id.ToString()
         };
 
-        var (access,refresh) = _jwtService.GenerateTokens(NewPayload);
+        var (access, refresh) = _jwtService.GenerateTokens(NewPayload);
 
         result.Data.Verified2fa = true;
         result.Data.Secret2fa = null;
@@ -232,7 +252,7 @@ public class AuthService : IAuthService
 
     public async Task<Result<User>> Resend2FacAsync(Guid id)
     {
-        var result = await _userRepository.FindFirstAsync(u=>u.Id == id);
+        var result = await _userRepository.FindFirstAsync(u => u.Id == id);
         if (!result.IsSuccess) return Result<User>.Failure(result.Code, result.Message);
         if (result.Data.Verified2fa)
         {
@@ -259,7 +279,8 @@ public class AuthService : IAuthService
 
         if (!result.IsValid) return Result<UserDto>.Failure(ERROR_CODE.INVALID_TOKEN, result.Message);
         var payload = result.Claims.MapClaimsToPayload();
-        var fetchResult = await _userRepository.FindUserWithSessionAndRoleAsync(user => user.Id == Guid.Parse(payload.Id));
+        var fetchResult =
+            await _userRepository.FindUserWithSessionAndRoleAsync(user => user.Id == Guid.Parse(payload.Id));
         if (!fetchResult.IsSuccess) return Result<UserDto>.Failure(fetchResult.Code, fetchResult.Message);
         var user = fetchResult.Data;
         if (!user.Verified2fa && user.Verified2fa)
@@ -284,8 +305,11 @@ public class AuthService : IAuthService
     {
         var sessionResult = await _sessionRepository.FindFirstAsync(session => session.Id == Guid.Parse(sessionId));
         if (!sessionResult.IsSuccess)
+        {
             return Result<User>.Failure(sessionResult.Code, "Actualemente no hemos encontrado una sesión activa");
-        var deleteResult = await _sessionRepository.DeleteAsync(sessionResult.Data.Id.ToString());
+        }
+
+        var deleteResult = await _sessionRepository.DeleteAsync(sessionResult.Data);
         return !deleteResult.IsSuccess
             ? Result<User>.Failure(deleteResult.Code, deleteResult.Message)
             : Result<User>.Success("Sesión cerrada correctamente");
@@ -312,7 +336,7 @@ public class AuthService : IAuthService
             if (timeSinceLastRequest < delayTime)
             {
                 return Result<User>.Failure(ERROR_CODE.INVALID_OPERATION,
-                    "Debes esperar un tiempo antes de solicitar un nuevo cambio de contraseña");
+                    $"Debes esperar {delayTime} minutos antes volver de solicitar un nuevo cambio de contraseña");
             }
         }
 
@@ -320,22 +344,22 @@ public class AuthService : IAuthService
         {
             new(ClaimTypes.NameIdentifier, user.Id.ToString()),
         };
-        var token = _jwtService.GenerateToken(claims, user.Id.ToString());
+        var SecretKey = _configuration.GetValue<string>("SecretResetPassword");
+        var token = _jwtService.GenerateToken(claims, SecretKey);
 
-        var updateResult = await _userRepository.UpdateAsync(new User
-        {
-            Id = user.Id,
-            PasswordToken = token,
-            RestoreAttemptAt = DateTime.UtcNow,
-            RestoreAttemptCount = user.RestoreAttemptCount + 1
-        });
+        user.PasswordToken = token;
+        user.RestoreAttemptAt = DateTime.UtcNow;
+        user.RestoreAttemptCount += 1;
+
+        var updateResult = await _userRepository.UpdateAsync(user);
         if (!updateResult.IsSuccess) return Result<User>.Failure(updateResult.Code, updateResult.Message);
 
+        var FrontEndUrl = _configuration.GetValue<string>("ForgotPasswordUrl");
         MailPayload payload = new()
         {
             ToEmail = user.Email,
             Subject = "Restablecer contraseña",
-            Model = new TemplateModel(user.Name, token)
+            Model = new TemplateModel(user.Name, $"{FrontEndUrl}/{token}")
         };
         var emailResult = await _emailService.SendForgotPasswordEmailAsync(payload);
         if (!emailResult.IsSuccess) return Result<User>.Failure(emailResult.Code, emailResult.Message);
@@ -345,10 +369,17 @@ public class AuthService : IAuthService
 
     public async Task<Result<User>> ValidateTokenAsync(string token)
     {
-        var result = _jwtService.IsValidToken(token);
+        var SecretKey = _configuration.GetValue<string>("SecretResetPassword");
+        var result = _jwtService.IsValidToken(token, SecretKey);
         if (!result.IsValid) return Result<User>.Failure(ERROR_CODE.INVALID_TOKEN, result.Message);
-        var payload = result.Claims.MapClaimsToPayload();
-        var fetchResult = await _userRepository.FindFirstAsync(user => user.Id == Guid.Parse(payload.Id));
+        var Id = result.Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        if (Id is null)
+        {
+            return Result<User>.Failure(ERROR_CODE.INVALID_TOKEN, "No se ha encontrado el identificador del usuario");
+        }
+
+        var fetchResult = await _userRepository.FindFirstAsync(user => user.Id == Guid.Parse(Id));
         return !fetchResult.IsSuccess
             ? Result<User>.Failure(fetchResult.Code, fetchResult.Message)
             : Result<User>.Success("Token válido");
@@ -356,11 +387,17 @@ public class AuthService : IAuthService
 
     public async Task<Result<User>> ResetPasswordAsync(ResetPasswordDto model)
     {
-        var result = _jwtService.IsValidToken(model.token);
+        var SecretKey = _configuration.GetValue<string>("SecretResetPassword");
+        var result = _jwtService.IsValidToken(model.token, SecretKey);
         if (!result.IsValid) return Result<User>.Failure(ERROR_CODE.INVALID_TOKEN, result.Message);
 
-        var payload = result.Claims.MapClaimsToPayload();
-        var fetchResult = await _userRepository.FindFirstAsync(user => user.Id == Guid.Parse(payload.Id));
+        var Id = result.Claims.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (Id is null)
+        {
+            return Result<User>.Failure(ERROR_CODE.INVALID_TOKEN, "No se ha encontrado el identificador del usuario");
+        }
+
+        var fetchResult = await _userRepository.FindFirstAsync(user => user.Id == Guid.Parse(Id));
         if (!fetchResult.IsSuccess) return Result<User>.Failure(fetchResult.Code, fetchResult.Message);
         var user = fetchResult.Data;
         if (!user.AccountVerified)
@@ -376,14 +413,12 @@ public class AuthService : IAuthService
         }
 
         var hashedPassword = new PasswordHasher<object>().HashPassword(null, model.password);
-        var updateResult = await _userRepository.UpdateAsync(new User
-        {
-            Id = user.Id,
-            Password = hashedPassword,
-            PasswordToken = null,
-            RestoreAttemptAt = null,
-            RestoreAttemptCount = 0
-        });
+        user.Password = hashedPassword;
+        user.PasswordToken = null;
+        user.RestoreAttemptAt = null;
+        user.RestoreAttemptCount = 0;
+        var updateResult = await _userRepository.UpdateAsync(user);
+
         return !updateResult.IsSuccess
             ? Result<User>.Failure(updateResult.Code,
                 "Ops! parece que hubo un error al registrar el usuario intentalo de nuevo")
@@ -403,7 +438,7 @@ public class AuthService : IAuthService
         }
 
         var IsSamePassword =
-            new PasswordHasher<object>().VerifyHashedPassword(null, result.Data.Password, model.newPassword) ==
+            new PasswordHasher<object>().VerifyHashedPassword(null, result.Data.Password, model.password) ==
             PasswordVerificationResult.Success;
         if (!IsSamePassword)
         {
@@ -412,11 +447,8 @@ public class AuthService : IAuthService
         }
 
         var hashedPassword = new PasswordHasher<object>().HashPassword(null, model.newPassword);
-        var updateResult = await _userRepository.UpdateAsync(new User
-        {
-            Id = Guid.Parse(model.userId),
-            Password = hashedPassword
-        });
+        result.Data.Password = hashedPassword;
+        var updateResult = await _userRepository.UpdateAsync(result.Data);
         return !updateResult.IsSuccess
             ? Result<User>.Failure(updateResult.Code, updateResult.Message)
             : Result<User>.Success("Contraseña actualizada correctamente");

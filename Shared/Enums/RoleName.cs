@@ -7,5 +7,6 @@ public enum RoleName
     EDITOR,
     REVIEWER,
     AUTHOR,
-    READER
+    READER, 
+    GUEST
 }
