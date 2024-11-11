@@ -14,6 +14,8 @@ builder.Services.AddSwagger();
 var app = builder.Build();
 app.UseMiddleware<InterceptorMiddleware>();
 app.UsePathBase("/api/v1");
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 app.UseLocalSwagger();
 app.UseHttpsRedirection();

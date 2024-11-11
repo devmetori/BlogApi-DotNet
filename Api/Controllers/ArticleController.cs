@@ -1,8 +1,10 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using BlogApi.Api.Services.Interfaces;
 using BlogApi.Shared.Exceptions;
-using BlogApi.Api.Attributes;
 using BlogApi.Shared.DTOs;
+using BlogApi.Shared.Enums;
+using System.Security.Claims;
+using BlogApi.Api.Attributes;
 
 namespace BlogApi.Api.Controllers;
 
@@ -14,10 +16,19 @@ public class ArticleController(IArticleService _articleService) : Controller
     [HttpGet]
     public async Task<IActionResult> GetAllPublishedArticles()
     {
+
         var result = await _articleService.GetAllPublishedArticlesAsync();
         if (!result.IsSuccess) HttpException.ThrowException(result.Code, result.Message);
         return Ok(new { success = true, message = result.Message, data = result.Data });
     }
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetArticle([FromRoute] Guid id)
+    {
+        var result = await _articleService.GetArticleAsync(id);
+        if (!result.IsSuccess) HttpException.ThrowException(result.Code, result.Message);
+        return Ok(new { success = true, message = result.Message, data = result.Data });
+    }
+  
 
     [HttpGet("all")]
     public async Task<IActionResult> GetAllArticles()
@@ -27,18 +38,14 @@ public class ArticleController(IArticleService _articleService) : Controller
         return Ok(new { success = true, message = result.Message, data = result.Data });
     }
 
-    [HttpGet("published/{id}")]
-    public async Task<IActionResult> GetPublishedArticle([FromRoute] string id)
-    {
-        var result = await _articleService.GetPublishedArticleAsync(Guid.Parse(id));
-        if (!result.IsSuccess) HttpException.ThrowException(result.Code, result.Message);
-        return Ok(new { success = true, message = result.Message, data = result.Data });
-    }
 
     [HttpPost("create")]
-    public async Task<IActionResult> CreateArticle([FromBody] ArticleDto model)
+    public async Task<IActionResult> CreateArticle([FromBody] ArticleDto article)
     {
-        var result = await _articleService.CreateArticleAsync(model);
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId)) HttpException.ThrowException(ERROR_CODE.UNAUTHORIZED,  "Ha sorgido un error inesperado con tu sesión, por favor vuelve a intentarlo  o vuelve a iniciar sesión.");
+       
+        var result = await _articleService.CreateArticleAsync(Guid.Parse(userId), article);
         if (!result.IsSuccess) HttpException.ThrowException(result.Code, result.Message);
         return Ok(new { success = true, message = result.Message, data = result.Data });
     }
@@ -62,7 +69,7 @@ public class ArticleController(IArticleService _articleService) : Controller
     [HttpPut("edit/{id}")]
     public async Task<IActionResult> EditArticle([FromRoute] string id, [FromBody] ArticleDto model)
     {
-        var result = await _articleService.EditArticleAsync(Guid.Parse(id),model);
+        var result = await _articleService.EditArticleAsync(Guid.Parse(id), model);
         if (!result.IsSuccess) HttpException.ThrowException(result.Code, result.Message);
         return Ok(new { success = true, message = result.Message, data = result.Data });
     }
@@ -91,13 +98,6 @@ public class ArticleController(IArticleService _articleService) : Controller
         return Ok(new { success = true, message = result.Message, data = result.Data });
     }
 
-    [HttpGet("review/{id}")]
-    public async Task<IActionResult> GetArticleForReview([FromRoute] string id)
-    {
-        var result = await _articleService.GetArticleForReviewAsync(Guid.Parse(id));
-        if (!result.IsSuccess) HttpException.ThrowException(result.Code, result.Message);
-        return Ok(new { success = true, message = result.Message, data = result.Data });
-    }
 
     [HttpPatch("review/{id}")]
     public async Task<IActionResult> ReviewArticle([FromRoute] string id, [FromBody] ReviewDto model)
@@ -115,13 +115,6 @@ public class ArticleController(IArticleService _articleService) : Controller
         return Ok(new { success = true, message = result.Message, data = result.Data });
     }
 
-    [HttpGet("approval/{id}")]
-    public async Task<IActionResult> GetArticleForApproval([FromRoute] string id)
-    {
-        var result = await _articleService.GetArticleForApprovalAsync(Guid.Parse(id));
-        if (!result.IsSuccess) HttpException.ThrowException(result.Code, result.Message);
-        return Ok(new { success = true, message = result.Message, data = result.Data });
-    }
 
     [HttpPatch("approval/{id}")]
     public async Task<IActionResult> ApprovalArticle([FromRoute] string id, [FromBody] ApprovalDto model)
@@ -150,7 +143,7 @@ public class ArticleController(IArticleService _articleService) : Controller
     [HttpGet("audit/{id}")]
     public async Task<IActionResult> GetArticleAudit([FromRoute] string id)
     {
-        var result = await _articleService.GetArticleAuditLogAsync( Guid.Parse(id));
+        var result = await _articleService.GetArticleAuditLogAsync(Guid.Parse(id));
         if (!result.IsSuccess) HttpException.ThrowException(result.Code, result.Message);
         return Ok(new { success = true, message = result.Message, data = result.Data });
     }

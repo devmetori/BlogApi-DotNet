@@ -9,7 +9,7 @@ public class Article
     public string Title { get; set; }
     public string Content { get; set; }
     public int Words { get; set; }
-    public ArticleStatus Status { get; set; } = ArticleStatus.DRAFT;
+    public string Status { get; set; } = ArticleStatus.DRAFT.ToString();
     public string? EditorComments { get; set; }
     public string? ReviewerComments { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

@@ -4,6 +4,7 @@ using BlogApi.Data.Repository.Interfaces;
 using BlogApi.Shared.Enums;
 using BlogApi.Shared.Models;
 using BlogApi.Shared.Utils;
+using Microsoft.EntityFrameworkCore;
 
 namespace BlogApi.Data.Repository;
 
@@ -30,13 +31,13 @@ public class ArticleRepository(BlogDbContext context) : Repository<Article>(cont
         }
     }
 
-    public async  Task<Result<IEnumerable<Article>>> EditArticle(Article newArticle)
+    public async Task<Result<IEnumerable<Article>>> EditArticle(Article newArticle)
     {
         try
         {
             var articleResult = await this.GetByIdAsync(newArticle.Id.ToString());
-            
-            if(!articleResult.IsSuccess) return Result<IEnumerable<Article>>.Failure(articleResult.Code, articleResult.Message);
+
+            if (!articleResult.IsSuccess) return Result<IEnumerable<Article>>.Failure(articleResult.Code, articleResult.Message);
             var article = articleResult.Data;
             article.Content = newArticle.Content;
             article.Title = newArticle.Title;
@@ -54,58 +55,24 @@ public class ArticleRepository(BlogDbContext context) : Repository<Article>(cont
         }
     }
 
-    public Task<Result<Article>> DeleteArticle(Guid id)
-    {
-        throw new NotImplementedException();
-    }
 
-    public Task<Result<IEnumerable<Article>>> GetAllArticles()
-    {
-        throw new NotImplementedException();
-    }
 
-    public Task<Result<IEnumerable<Article>>> GetPublishedArticles()
-    {
-        throw new NotImplementedException();
-    }
 
-    public Task<Result<Article>> GetPublishedArticle(Guid id)
-    {
-        throw new NotImplementedException();
-    }
 
-    public Task<Result<IEnumerable<Article>>> GetAllArticlesForReview()
-    {
-        throw new NotImplementedException();
-    }
 
-    public Task<Result<Article>> GetArticleForReview(Guid id)
+    public async Task<Result<IEnumerable<User>>> GetAllAuthorsAsync()
     {
-        throw new NotImplementedException();
-    }
 
-    public Task<Result<IEnumerable<Article>>> GetAllArticlesForApproval()
-    {
-        throw new NotImplementedException();
-    }
+        try { 
 
-    public Task<Result<Article>> GetArticleForApproval(Guid id)
-    {
-        throw new NotImplementedException();
-    }
+            var result = await context.Articles.Select(m => m.Author).Distinct().ToListAsync();
+            if(result == null || !result.Any()) return Result<IEnumerable<User>>.Failure(ERROR_CODE.RECORD_NOT_FOUND, "No se encontraron autores");
+            return Result<IEnumerable<User>>.Success(result);
+        } catch (Exception e) { 
+            Console.WriteLine(e);
+            return Result<IEnumerable<User>>.Failure(ERROR_CODE.UNKNOWN_ERROR, "Error al obtener autores");
+        }
 
-    public Task<Result<Article>> ApproveArticle(Guid id)
-    {
-        throw new NotImplementedException();
-    }
 
-    public Task<Result<Article>> PublishArticle(Guid id)
-    {
-        throw new NotImplementedException();
-    }
-
-    public Task<Result<Article>> UnpublishArticle(Guid id)
-    {
-        throw new NotImplementedException();
     }
 }

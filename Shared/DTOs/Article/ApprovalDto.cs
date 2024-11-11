@@ -2,4 +2,4 @@
 
 namespace BlogApi.Shared.DTOs;
 
-public record ApprovalDto(string comment, ArticleStatus status);
+public record ApprovalDto(string Comment, string  Status);

@@ -20,6 +20,7 @@
     </ItemGroup>
     <ItemGroup>
       <Folder Include="Data\Models\" />
+      <Folder Include="logs\" />
     </ItemGroup>
 
 </Project>
