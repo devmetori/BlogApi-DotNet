@@ -22,7 +22,7 @@ public interface IArticleService
     Task<Result<Article>> ApproveArticleAsync(Guid id, ApprovalDto approval);
     Task<Result<Article>> UnpublishArticleAsync(Guid id);
     Task<Result<Article>> PublishArticleAsync(Guid id);
-    Task<Result<AuditLog>> GetArticleAuditLogAsync(Guid id);
+    Task<Result<IEnumerable<AuditLog>>> GetArticleAuditLogAsync(Guid id);
     Task<Result<IEnumerable<AuditLog>>> GetAllAuditLogsAsync();
     Task<Result<AuditLog>> AuditActionAsync(AuditPayload payload);
 }

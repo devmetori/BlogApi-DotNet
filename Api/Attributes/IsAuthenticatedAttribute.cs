@@ -13,7 +13,8 @@ public class IsAuthenticatedAttribute : Attribute, IAuthorizationFilter
         if (string.IsNullOrEmpty(authorizationHeader) || !authorizationHeader.StartsWith("Bearer "))
         {
             context.Result = UnauthorizedResponse(ERROR_CODE.UNAUTHORIZED,
-                "Parece que no tienes un sesion activa en este momento. Inicia session para poder aceder este recurso."
+                "Parece que no tienes un sesion activa en este momento. Inicia session para poder aceder este recurso.",
+                context.HttpContext.Request.Cookies["X-Tracker-ID"]
             );
             return;
         }
@@ -25,7 +26,8 @@ public class IsAuthenticatedAttribute : Attribute, IAuthorizationFilter
         if (!result.IsValid)
         {
             context.Result = UnauthorizedResponse(ERROR_CODE.UNAUTHORIZED,
-                "La sesión ha expirado, intenta iniciar de nuevo");
+                "La sesión ha expirado, intenta iniciar de nuevo",
+                context.HttpContext.Request.Cookies["X-Tracker-ID"]);
             return;
         }
 
@@ -39,7 +41,7 @@ public class IsAuthenticatedAttribute : Attribute, IAuthorizationFilter
         return jwtService;
     }
 
-    private JsonResult UnauthorizedResponse(ERROR_CODE code, string message)
+    private JsonResult UnauthorizedResponse(ERROR_CODE code, string message, string requestId)
     {
         return new JsonResult(new
         {
@@ -47,7 +49,8 @@ public class IsAuthenticatedAttribute : Attribute, IAuthorizationFilter
             error = new
             {
                 code,
-                message
+                message,
+                requestId,
             }
         }) { StatusCode = 401 };
     }

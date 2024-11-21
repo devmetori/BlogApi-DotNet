@@ -17,8 +17,8 @@ public class GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger) : IE
             var exc = (HttpException)exception;
             var response = new
             {
-                success = false,
-                error = new { code = exc.Code, message = exc.Message, requestId = traceId }
+                Success = false,
+                Error = new { code = exc.Code, message = exc.Message, requestId = traceId }
             };
             logger.LogError(exception,exc.Message);
             

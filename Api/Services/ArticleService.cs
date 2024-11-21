@@ -198,11 +198,11 @@ public class ArticleService : IArticleService
         return Result<Article>.Success(result.Data);
 
     }
-    public async Task<Result<AuditLog>> GetArticleAuditLogAsync(Guid id)
+    public async Task<Result<IEnumerable<AuditLog>>> GetArticleAuditLogAsync(Guid id)
     {
         var result = await _auditRepository.FindAsync(x => x.ArticleId == id);
-        if (!result.IsSuccess) return Result<AuditLog>.Failure(result.Code, result.Message);
-        return Result<AuditLog>.Success(result.Data.FirstOrDefault());
+        if (!result.IsSuccess) return Result<IEnumerable<AuditLog>>.Failure(result.Code, result.Message);
+        return Result<IEnumerable<AuditLog>>.Success(result.Data);
 
     }
 

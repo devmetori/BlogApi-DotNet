@@ -92,6 +92,8 @@ public class UserRepository(BlogDbContext context) : Repository<User>(context), 
         {
             
 
+     
+
             var result = await context.Users
                 .Where(u => u.Id == Guid.Parse(userId))
                 .SelectMany(u => u.Role.Authorizations)
