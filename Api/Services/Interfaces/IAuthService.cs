@@ -18,6 +18,9 @@ public interface IAuthService
     Task<Result<User>> ChangePasswordAsync(ChangePwdDto model);
     Task<Result<UserDto>> Verify2FacAsync(TwoFacAuthDto model);
     Task<Result<User>> Resend2FacAsync(Guid id);
-    Task<Result<User>> GetUserProfile(Guid parse);
+
+    Task<Result<User>> GetUserProfile(Guid id);
     Task<Result<IEnumerable<User>>> GetAllUsers();
+    Task<Result<List<Permission>>> GetUserPermissionsByIdAsync(string userId);
+
 }

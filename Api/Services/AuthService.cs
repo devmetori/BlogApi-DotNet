@@ -22,12 +22,14 @@ public class AuthService : IAuthService
     private readonly IEmailService _emailService;
     private readonly IJwtService _jwtService;
     private readonly IWebHostEnvironment _env;
+    private readonly ICacheService _cacheService;
 
 
     public AuthService(IWebHostEnvironment env,
         IConfiguration configuration, IUserRepository userRepository, IRoleRepository roleRepository,
         ISessionRepository sessionRepository, IJwtService jwtService,
-        IEmailService emailService, ITwoFactorAuthService twoFactorAuthService)
+        IEmailService emailService, ITwoFactorAuthService twoFactorAuthService
+        , ICacheService cacheService)
     {
         _twoFactorAuthService = twoFactorAuthService;
         _sessionRepository = sessionRepository;
@@ -37,6 +39,7 @@ public class AuthService : IAuthService
         _emailService = emailService;
         _jwtService = jwtService;
         _env = env;
+        _cacheService = cacheService;
     }
 
     public async Task<Result<UserDto>> SignUpAsync(SignUpDto model)
@@ -72,7 +75,8 @@ public class AuthService : IAuthService
         if (!result.IsSuccess) Result<User>.Failure(result.Code, result.Message);
         MailPayload Payload = new()
         {
-            ToEmail = model.email, Subject = "Bienvenido a BlogAPI",
+            ToEmail = model.email,
+            Subject = "Bienvenido a BlogAPI",
             Model = new TemplateModel(model.name, "http://localhost:5000/blog")
         };
         var resultWelcomeEmail = await _emailService.SendWelcomeEmailAsync(Payload);
@@ -83,7 +87,8 @@ public class AuthService : IAuthService
 
         MailPayload verificationPayload = new()
         {
-            ToEmail = model.email, Subject = "Verifica tu cuenta",
+            ToEmail = model.email,
+            Subject = "Verifica tu cuenta",
             Model = new TemplateModel(model.name, "http://localhost:5000/auth/verify/" + result.Data.Id)
         };
         var resultVerificationEmail = await _emailService.SendEmailAsync(verificationPayload);
@@ -463,5 +468,15 @@ public class AuthService : IAuthService
     public async Task<Result<IEnumerable<User>>> GetAllUsers()
     {
         return await _userRepository.GetAllAsync();
+    }
+
+    public async Task<Result<List<Permission>>> GetUserPermissionsByIdAsync(string userId)
+    {
+        var cacheResult = _cacheService.Get<List<Permission>>(userId);
+        if (cacheResult is not null) return Result<List<Permission>>.Success(cacheResult);
+        var result = await _userRepository.GetUserPermissionsByIdAsync(userId);
+        if (!result.IsSuccess) return Result<List<Permission>>.Failure(result.Code, result.Message);
+        _cacheService.Set(userId, result.Data, TimeSpan.FromMinutes(60));
+        return Result<List<Permission>>.Success(result.Data);
     }
 }

@@ -3,9 +3,9 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using BlogApi.Shared.Enums;
+using BlogApi.Api.Services.Interfaces;
 
 
-//FIXME: Mejorar la implementación de la clase IsAllowedAttribute, para hacerla más eficiente, evitando la petición a la base de datos en cada petición.
 namespace BlogApi.Api.Attributes;
 
 [AttributeUsage(AttributeTargets.Class | AttributeTargets.Method)]
@@ -57,8 +57,8 @@ public class IsAllowedAttribute : Attribute, IAuthorizationFilter
         }
 
         using var scope = context.HttpContext.RequestServices.CreateScope();
-        var userRepository = scope.ServiceProvider.GetRequiredService<IUserRepository>();
-        var result = await userRepository.GetUserPermissionsByIdAsync(userId);
+        var authServices = scope.ServiceProvider.GetRequiredService<IAuthService>();
+        var result = await authServices.GetUserPermissionsByIdAsync(userId);
         if (!result.IsSuccess)
         {
             context.Result = HttpResponse(ERROR_CODE.FORBIDDEN,

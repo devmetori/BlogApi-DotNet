@@ -31,16 +31,21 @@ public static class ConfigExtension
         // Database setup
         var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
         builder.Services.AddDbContext<BlogDbContext>(options => { options.UseSqlite(connectionString); });
-        
+
         //  Environment setup
         builder.Services.Configure<TwoFactorSettings>(builder.Configuration.GetSection("TwoFactorSettings"));
         builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
         builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
         // Cors setup
+
         builder.Services.AddCors(o => o.AddDefaultPolicy(b => b.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader()));
+
         // setup controllers
         builder.Services.AddControllersWithViews(options => { options.Filters.Add<ModelValidationFilter>(); });
+
+        // setup cache
+        builder.Services.AddMemoryCache();
     }
 
     public static void InitializeDb(this WebApplicationBuilder builder)
@@ -60,6 +65,7 @@ public static class ConfigExtension
         services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<ICacheService, CacheService>();
     }
 
     public static void AddLocalRepositories(this IServiceCollection services)
